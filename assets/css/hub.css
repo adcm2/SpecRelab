@@ -1,0 +1,6 @@
+/* SpecRelab shared navigation; product pages retain their source styles. */
+.sitebar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem max(1rem,calc((100vw - 1180px)/2));background:#102b36;color:#f4f1ea;font:500 1rem/1.4 system-ui,sans-serif}
+.sitebar a{color:inherit;text-decoration:none}.sitebar .brand{font-weight:750;letter-spacing:.03em}.sitebar nav{display:flex;gap:1.2rem;flex-wrap:wrap}.sitebar a:focus-visible{outline:3px solid #e5b36e;outline-offset:3px}
+@media(max-width:600px){.sitebar{align-items:flex-start;flex-direction:column}.sitebar nav{gap:.6rem 1rem}}
+
+.pin-guidance{max-width:72rem;margin:1rem 0;padding:.65rem .9rem;border-left:3px solid #d5a66c;background:rgba(213,166,108,.10);font-size:.92rem;line-height:1.55}.pin-guidance code{overflow-wrap:anywhere}

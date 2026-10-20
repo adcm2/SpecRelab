@@ -1,0 +1,7 @@
+source "https://rubygems.org"
+gem "jekyll", "4.3.4"
+gem "kramdown", "2.5.1"
+gem "rouge", "4.5.1"
+gem "jekyll-feed", "0.17.0"
+gem "jekyll-sitemap", "1.4.0"
+gem "bigdecimal", "3.1.3"

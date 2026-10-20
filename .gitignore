@@ -1,0 +1,8 @@
+.cache/
+.build-src/
+.build/
+_site/
+.bundle/
+vendor/
+__pycache__/
+*.py[cod]

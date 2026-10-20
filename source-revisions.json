@@ -1,0 +1,130 @@
+{
+  "website_stage": 2,
+  "sources": {
+    "gplspec": {
+      "repository": "https://github.com/adcm2/gplspec.git",
+      "commit": "a9705c65533ccc5ed4db2188496258b5e53cbcf9",
+      "branch_at_approval": "refactor/core-cleanup",
+      "role": "Jekyll tutorials, benchmark pages, math, figures and code highlighting"
+    },
+    "DSpecM1D": {
+      "repository": "https://github.com/adcm2/DSpecM1D.git",
+      "commit": "42166fb36fbe005cf674a489cdb28ab8273807dd",
+      "branch_at_approval": "phase1-maintenance",
+      "role": "authored guides, report, parameter example and complete generated Doxygen API"
+    }
+  },
+  "artwork": {
+    "earth_structure": {
+      "path": "assets/images/dspecm1d-polar-rays.svg",
+      "identity_checked_by_build": true,
+      "sha256": "2d0f9edfa6c5cb69c2035918cbce479d5d6fa0e5c2ed1e9af95ce442c89711a8",
+      "provenance": {
+        "model": "PREM",
+        "engine": "ObsPy TauP",
+        "obspy_version": "1.5.0",
+        "source_depth_km": 0,
+        "source_position": "north pole",
+        "radius_km": 6371.0,
+        "core_mantle_boundary_depth_km": 2891.0,
+        "inner_outer_core_boundary_depth_km": 5149.5,
+        "illustration": "Meridional cross section. Each physical ray path is mirrored about the polar axis. Labels are positioned for clarity.",
+        "rays": [
+          {
+            "phase": "P",
+            "distance_degrees": 35,
+            "travel_time_seconds": 413.2285873257749,
+            "maximum_depth_km": 847.0753792982296,
+            "path_points": 181
+          },
+          {
+            "phase": "P",
+            "distance_degrees": 60,
+            "travel_time_seconds": 607.1525502454472,
+            "maximum_depth_km": 1553.10652954356,
+            "path_points": 275
+          },
+          {
+            "phase": "P",
+            "distance_degrees": 85,
+            "travel_time_seconds": 755.652859637706,
+            "maximum_depth_km": 2522.9955974972304,
+            "path_points": 353
+          },
+          {
+            "phase": "PcP",
+            "distance_degrees": 65,
+            "travel_time_seconds": 673.1738782731779,
+            "maximum_depth_km": 2891.0,
+            "path_points": 379
+          },
+          {
+            "phase": "PKP",
+            "distance_degrees": 160,
+            "travel_time_seconds": 1238.233993104711,
+            "maximum_depth_km": 4008.1593418745692,
+            "path_points": 525
+          },
+          {
+            "phase": "PKIKP",
+            "distance_degrees": 175,
+            "travel_time_seconds": 1209.7599763175062,
+            "maximum_depth_km": 6184.085980067105,
+            "path_points": 689
+          }
+        ]
+      },
+      "source_sha256": "2d0f9edfa6c5cb69c2035918cbce479d5d6fa0e5c2ed1e9af95ce442c89711a8",
+      "provenance_record_sha256": "99cb8fd20384ad47a7c931b86a657681e71610a49742574c2552d56ada5f2677"
+    },
+    "waveform_excerpt": {
+      "path": "assets/data/dspecm1d-paper-ex1-excerpt.txt",
+      "sha256": "a683b1f0d4d018e04ea2599b5d8f33af97bfc7f52eb9760909d1eac383231441",
+      "samples": 2881,
+      "time_seconds": [
+        0,
+        14400
+      ],
+      "spacing_seconds": 5,
+      "provenance": {
+        "source": "plotting/outputs/ex1_t.out",
+        "source_sha256": "074c6b3019564afae916157b1e25353deee6b5f28c2687f5ad58be122a43b0df",
+        "columns": "time in seconds; radial, north, east synthetic displacement in metres",
+        "rows": "indices 0 through 14400 inclusive, step 5",
+        "samples": 2881,
+        "time_range_seconds": [
+          0,
+          14400
+        ],
+        "sample_spacing_seconds": 5,
+        "display_range_minutes": [
+          0,
+          240
+        ],
+        "excerpt_sha256": "a683b1f0d4d018e04ea2599b5d8f33af97bfc7f52eb9760909d1eac383231441"
+      },
+      "provenance_record_sha256": "32af99514540175df4133b262af8d1f218c4425fe179208e843c29e8c223bbea"
+    },
+    "full_waveform": {
+      "included": false,
+      "sha256": "074c6b3019564afae916157b1e25353deee6b5f28c2687f5ad58be122a43b0df",
+      "bytes": 49143136
+    },
+    "tutorial_output_excerpt": {
+      "path": "assets/data/first_seismogram.out_t.out",
+      "sha256": "0417218d95e0fb3001bd968d34cfe13100d284ba6c8e4c084060820be0c2b7ba"
+    }
+  },
+  "build_tools": {
+    "ruby": "3.2.3",
+    "bundler": "2.4.19",
+    "jekyll": "4.3.4",
+    "kramdown": "2.5.1",
+    "rouge": "4.5.1",
+    "jekyll-feed": "0.17.0",
+    "jekyll-sitemap": "1.4.0",
+    "lock_file": "Gemfile.lock",
+    "doxygen": "1.9.8",
+    "scientific_solvers_run": false
+  }
+}

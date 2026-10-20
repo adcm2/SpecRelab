@@ -1,0 +1,74 @@
+name: Build and publish Pages
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and validate both URL roots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Check out site sources
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Ruby and Bundler
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2.3'
+          bundler: '2.4.19'
+      - name: Install Doxygen 1.9.8
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes doxygen
+          test "$(doxygen --version)" = '1.9.8'
+      - name: Fetch immutable source pins
+        run: scripts/fetch-sources.sh
+      - name: Install locked site gems
+        run: scripts/bundle install --jobs 4 --retry 3
+      - name: Build and validate project-prefix site
+        run: |
+          python3 scripts/build.py --baseurl /SpecRelab --doxygen-have-dot no --destination .build/site
+          python3 scripts/check_site.py --site .build/site --baseurl /SpecRelab
+      - name: Build and validate domain-root site
+        run: |
+          python3 scripts/build.py --baseurl '' --doxygen-have-dot no --destination .build/site-root-check
+          python3 scripts/check_site.py --site .build/site-root-check --baseurl ''
+      - name: Upload the project-prefix site
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .build/site
+
+  deploy:
+    name: Deploy reviewed main build
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v4
