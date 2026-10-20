@@ -23,6 +23,20 @@ html,body{overflow-x:clip}
 .code-copy-button svg{display:block;width:1rem;height:1rem;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}
 .copy-status{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 
+/* Keep the Doxygen navigation tree on its own sizing and line-height contract. */
+.dspecm1d #nav-tree,
+.dspecm1d #nav-tree * { box-sizing: content-box; }
+.dspecm1d #nav-tree .arrow {
+  height: 22px;
+  line-height: 22px;
+  vertical-align: middle;
+  text-align: center;
+}
+.dspecm1d #nav-tree .label,
+.dspecm1d #nav-tree .label a {
+  line-height: 22px;
+}
+
 /* Align the four guide groups while keeping the product and repository links on their own rows. */
 .dspecm1d nav[aria-label="Main navigation"] .shell>ul{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:1rem 1.4rem;padding:1rem 0}
 .dspecm1d nav[aria-label="Main navigation"] .shell>ul>li:first-child,.dspecm1d nav[aria-label="Main navigation"] .shell>ul>li:last-child{grid-column:1/-1}

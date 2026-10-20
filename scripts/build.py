@@ -259,21 +259,12 @@ def main():
         clone_line='cd DSpecM1D'
         if clone_line not in s: raise SystemExit("Could not place pinned checkout command in DSpecM1D installation block.")
         s=s.replace(clone_line,checkout_line,1)
-    status_text='The installed-package path has a known Linux CI failure while its CMake install step is under investigation.'
-    ci_link='<a href="https://github.com/adcm2/DSpecM1D/actions/runs/39327159316">CI run details</a>.'
-    install_marker='<section class="page-section"><h2>Install the CMake package</h2>'
-    if install_marker not in s: raise SystemExit("Could not place installed-package status in DSpecM1D installation guide.")
-    install_note=f'<p class="pin-guidance"><strong>Package status:</strong> {status_text} Use the <a href="library-example.html#source-tree-example">in-tree C++ example</a> while this is investigated. {ci_link}</p>'
-    s=s.replace(install_marker,install_note+install_marker,1)
     inst.write_text(s)
     library=droot/"library-example.html"; library_text=library.read_text()
     source_tree_marker='<section class="page-section"><h2>Build and run in the source tree</h2>'
     if source_tree_marker not in library_text: raise SystemExit("Could not identify DSpecM1D source-tree C++ example.")
     library_text=library_text.replace(source_tree_marker,'<section class="page-section" id="source-tree-example"><h2>Build and run in the source tree</h2>',1)
-    consumer_marker='<section class="page-section"><h2>Install and build a downstream consumer</h2>'
-    if consumer_marker not in library_text: raise SystemExit("Could not place installed-package status in DSpecM1D library example.")
-    library_note=f'<p class="pin-guidance"><strong>Package status:</strong> {status_text} Use the <a href="#source-tree-example">in-tree C++ example</a> while this is investigated. {ci_link}</p>'
-    library.write_text(library_text.replace(consumer_marker,library_note+consumer_marker,1))
+    library.write_text(library_text)
     first=droot/"first-seismogram.html"; first_text=first.read_text()
     first_notice=(f'<p class="pin-guidance"><strong>Revision for this example:</strong> <a href="https://github.com/adcm2/DSpecM1D/commit/{dspec_pin}"><code>{dspec_pin}</code></a>. Cloning checks out the default branch. After <code>git clone</code> and <code>cd DSpecM1D</code>, run <code>git checkout {dspec_pin}</code> from the checkout root before continuing with the build commands below.</p>')
     first_marker='<section class="page-section"><h2>2. Clone and build</h2>'
@@ -322,20 +313,22 @@ def main():
     # Adapt only href attributes for manual pages that are copied into this
     # site; leave generated API URLs, source links, and body/code text intact.
     manual_pages={"first-seismogram.html","installation.html","library-example.html","parameter-files.html","library-testing.html"}
+    manual_prefixes=("/DSpecM1D/","/SpecRelab/dspecm1d/")
     href_attribute=re.compile(r'''(?<![\w:-])(\bhref\s*=\s*)(["'])(.*?)\2''',re.I|re.S)
     def adapt_manual_href(match):
         value=match.group(3)
         parsed=urlsplit(value)
-        if parsed.scheme=="https" and parsed.netloc=="adcm2.github.io" and (parsed.path=="/DSpecM1D/" or parsed.path.startswith("/DSpecM1D/")):
-            relative=parsed.path.removeprefix("/DSpecM1D/")
+        prefix=next((prefix for prefix in manual_prefixes if parsed.path==prefix or parsed.path.startswith(prefix)),None)
+        if parsed.scheme=="https" and parsed.netloc=="adcm2.github.io" and prefix:
+            relative=parsed.path.removeprefix(prefix)
             if not relative or relative in manual_pages:
                 value=f"{a.baseurl}/dspecm1d/"+relative
                 if parsed.query:value+="?"+parsed.query
                 if parsed.fragment:value+="#"+parsed.fragment
         return match.group(1)+match.group(2)+value+match.group(2)
-    probe='<a href="https://adcm2.github.io/DSpecM1D/library-testing.html?view=full#tests">guide</a><a href="https://adcm2.github.io/DSpecM1D/api/classFoo.html">API</a><a href="https://other.example/DSpecM1D/installation.html">other</a><a data-href="https://adcm2.github.io/DSpecM1D/installation.html">data</a><svg xlink:href="https://adcm2.github.io/DSpecM1D/installation.html"></svg><p>https://adcm2.github.io/DSpecM1D/installation.html</p>'
+    probe='<a href="https://adcm2.github.io/DSpecM1D/library-testing.html?view=full#tests">legacy-guide</a><a href="https://adcm2.github.io/SpecRelab/dspecm1d/installation.html?view=quick#quick-start">current-guide</a><a href="https://adcm2.github.io/SpecRelab/dspecm1d/">current-home</a><a href="https://adcm2.github.io/DSpecM1D/api/classFoo.html">legacy-API</a><a href="https://adcm2.github.io/SpecRelab/dspecm1d/api/classFoo.html">current-API</a><a href="https://other.example/DSpecM1D/installation.html">other</a><a data-href="https://adcm2.github.io/SpecRelab/dspecm1d/installation.html">data</a><svg xlink:href="https://adcm2.github.io/SpecRelab/dspecm1d/installation.html"></svg><p>https://adcm2.github.io/SpecRelab/dspecm1d/installation.html</p>'
     checked=href_attribute.sub(adapt_manual_href,probe)
-    expected=f'<a href="{a.baseurl}/dspecm1d/library-testing.html?view=full#tests">guide</a><a href="https://adcm2.github.io/DSpecM1D/api/classFoo.html">API</a><a href="https://other.example/DSpecM1D/installation.html">other</a><a data-href="https://adcm2.github.io/DSpecM1D/installation.html">data</a><svg xlink:href="https://adcm2.github.io/DSpecM1D/installation.html"></svg><p>https://adcm2.github.io/DSpecM1D/installation.html</p>'
+    expected=f'<a href="{a.baseurl}/dspecm1d/library-testing.html?view=full#tests">legacy-guide</a><a href="{a.baseurl}/dspecm1d/installation.html?view=quick#quick-start">current-guide</a><a href="{a.baseurl}/dspecm1d/">current-home</a><a href="https://adcm2.github.io/DSpecM1D/api/classFoo.html">legacy-API</a><a href="https://adcm2.github.io/SpecRelab/dspecm1d/api/classFoo.html">current-API</a><a href="https://other.example/DSpecM1D/installation.html">other</a><a data-href="https://adcm2.github.io/SpecRelab/dspecm1d/installation.html">data</a><svg xlink:href="https://adcm2.github.io/SpecRelab/dspecm1d/installation.html"></svg><p>https://adcm2.github.io/SpecRelab/dspecm1d/installation.html</p>'
     if checked!=expected:raise SystemExit("Doxygen manual-link adapter regression: rewrote an unrelated URL or changed a non-href attribute")
     for page in (droot/"api").rglob("*.html"):
         html=page.read_text(errors="replace")
