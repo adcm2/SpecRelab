@@ -2,7 +2,9 @@
 
 Non-perturbative planetary modelling with particle relabelling, radial spectral elements and spherical harmonics.
 
-Current documentation: [DSpecM1D guides](https://adcm2.github.io/SpecRelab/dspecm1d/), [generated API](https://adcm2.github.io/SpecRelab/dspecm1d/api/), and [GPLSpec guides](https://adcm2.github.io/SpecRelab/gplspec/).
+Current documentation: [DSpecM1D guides](https://adcm2.github.io/SpecRelab/dspecm1d/), [generated API](https://adcm2.github.io/SpecRelab/dspecm1d/api/), and [GPLSpec guides](https://adcm2.github.io/SpecRelab/gplspec/). [YSpecpp guides and generated API](https://adcm2.github.io/SpecRelab/yspecpp/).
+
+YSpecpp documentation is built from the immutable revision in `source-revisions.json` using only its allowlisted public headers, docs, examples, and Doxygen inputs. To update it, review a source revision, update that pin and its sparse allowlist as needed, then run `scripts/fetch-sources.sh`, `python3 scripts/build.py`, and `python3 scripts/check_site.py`; the website build runs the source-owned manual/API builder and strict checker without configuring the numerical solver.
 
 The frozen `legacy/` snapshot preserves the original static pages. Rebuild compatibility output with `python3 scripts/legacy_compat.py build --scope dspecm1d --output .build/stage4/legacy-dspec`; use `--scope gplspec --gpl-repo /path/to/gplspec` to restore the original modeldata endpoints.
 

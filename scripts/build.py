@@ -3,6 +3,7 @@
 from pathlib import Path
 import argparse, json, re, shutil, subprocess, sys
 import os
+import tempfile
 from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 PINS = json.loads((ROOT / "source-revisions.json").read_text())
@@ -41,8 +42,8 @@ def checkout(name, offline):
             raise SystemExit(f"Offline {name} cache lacks pinned commit {spec['commit']}; fetch it with scripts/fetch-sources.sh while online.") from exc
     else:
         run(["git","-C",dest,"fetch","--filter=blob:none","--no-tags","origin",spec["commit"]])
-    paths={"gplspec":["_config.yml","_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","benchmark.md","api.md","getting-started.md","index.md","LICENSE","work/plots.md"],"DSpecM1D":["docs","DSpecM1D","tutorials/t1.cpp","README.md","data/params/first_seismogram.txt","love_numbers/report/love_numbers_report.pdf"]}[name]
-    directories={"_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","docs","DSpecM1D"}
+    paths={"gplspec":["_config.yml","_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","benchmark.md","api.md","getting-started.md","index.md","LICENSE","work/plots.md"],"DSpecM1D":["docs","DSpecM1D","tutorials/t1.cpp","README.md","data/params/first_seismogram.txt","love_numbers/report/love_numbers_report.pdf"],"YSpecpp":[".gitignore","CMakeLists.txt","README.md","LICENSE","YSpec","docs/site","docs/tools","docs/Doxyfile.in","docs/theory/adjoint-kernels.pdf","examples/prem.200"]}[name]
+    directories={"_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","docs","docs/site","docs/tools","DSpecM1D","YSpec"}
     patterns=["/"+path+("/" if path in directories else "") for path in paths]
     run(["git","-C",dest,"sparse-checkout","set","--no-cone","--",*patterns],env=git_environment(offline))
     run(["git","-C",dest,"checkout","--detach",spec["commit"]],env=git_environment(offline))
@@ -59,6 +60,63 @@ def markdown_prose(text, transform):
     chunks=re.split(r"(?ms)(^```[^\n]*\n.*?^```|^~~~[^\n]*\n.*?^~~~)",text)
     return "".join(chunk if i%2 else transform(chunk) for i,chunk in enumerate(chunks))
 
+def build_yspecpp(source_cache, commit):
+    # Keep the temporary Git worktree outside Jekyll's source and clean it even
+    # when a manual/API build fails; only checked output reaches the site.
+    with tempfile.TemporaryDirectory(prefix="yspecpp-docs-",dir=BUILD) as scratch:
+        source=Path(scratch)/"source"
+        run(["git","clone","--shared","--no-checkout",source_cache,source])
+        sparse=["/.gitignore","/CMakeLists.txt","/README.md","/LICENSE","/YSpec/",
+                "/docs/site/","/docs/tools/","/docs/Doxyfile.in",
+                "/docs/theory/adjoint-kernels.pdf","/examples/prem.200"]
+        run(["git","-C",source,"sparse-checkout","set","--no-cone","--",*sparse])
+        actual=subprocess.check_output(["git","-C",source,"rev-parse","HEAD"],text=True).strip()
+        if actual!=commit: raise SystemExit(f"YSpecpp build checkout mismatch: {actual}")
+        # A sparse source cache intentionally lacks unrelated blobs. Populate
+        # just the allowlisted index/worktree entries at its already pinned
+        # HEAD, marking omitted files skipped without expanding/fetching them.
+        run(["git","-C",source,"read-tree","--reset","-u",commit])
+        dirty=subprocess.check_output(["git","status","--porcelain","--untracked-files=all"],cwd=source,text=True).strip()
+        if dirty: raise SystemExit(f"YSpecpp isolated docs checkout is not clean: {dirty}")
+        build_dir=source/"build/spec-relab-docs"
+        run([sys.executable,source/"docs/tools/build_docs.py","--output",build_dir],cwd=source)
+        manual=build_dir/"site"
+        run([sys.executable,source/"docs/tools/check_docs.py",manual],cwd=source)
+        target=WORK/"yspecpp"
+        shutil.copytree(manual,target)
+        shutil.copy2(source/"LICENSE",target/"LICENSE")
+    return target
+
+def suite_header(baseurl, current):
+    items=[("All software",f"{baseurl}/#software",None),
+           ("GPLSpec",f"{baseurl}/#gplspec","gplspec"),
+           ("DSpecM1D",f"{baseurl}/dspecm1d/","dspecm1d"),
+           ("YSpecpp",f"{baseurl}/yspecpp/","yspecpp"),
+           ("DSpecM3D",f"{baseurl}/#dspecm3d",None)]
+    links="".join(f'<a href="{href}"'+(f' class="current" aria-current="location"' if name==current else "")+f'>{label}</a>' for label,href,name in items)
+    mark='<svg aria-hidden="true" class="brand-mark" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#d5a66c" stroke-width="1.5"/><path d="M4 16h24M16 3c5 6 5 20 0 26M16 3c-5 6-5 20 0 26" fill="none" stroke="#a9d9e4"/><circle cx="16" cy="16" r="3" fill="#d5a66c"/></svg>'
+    return f'<header class="suite-header"><a class="suite-logo" href="{baseurl}/">{mark}<span>SpecRelab <span class="suite-context">Particle relabelling · radial spectral elements · spherical harmonics</span></span></a><nav aria-label="Project navigation" class="suite-nav">{links}</nav></header>'
+
+def add_yspecpp_overlay(path, baseurl):
+    page=path.read_text(errors="replace")
+    if "<head>" not in page:
+        raise SystemExit(f"YSpecpp page lacks a standard head: {path}")
+    stylesheet=f'<link rel="stylesheet" href="{baseurl}/assets/hub.css">'
+    script=f'<script defer src="{baseurl}/assets/js/code-copy.js"></script>' if "/api/" in path.as_posix() else ""
+    page=page.replace("<head>","<head>"+stylesheet+script,1)
+    body=re.search(r'<body\b([^>]*)>',page)
+    if not body: raise SystemExit(f"YSpecpp page lacks a standard body: {path}")
+    attrs=body.group(1)
+    classes=re.search(r"\bclass=(['\"])(.*?)\1",attrs)
+    if classes:
+        value=classes.group(2)
+        if "yspecpp" not in value.split():
+            attrs=attrs[:classes.start(2)]+value+" yspecpp"+attrs[classes.end(2):]
+    else:
+        attrs+=' class="yspecpp"'
+    page=page[:body.start()]+"<body"+attrs+">"+suite_header(baseurl,"yspecpp")+page[body.end():]
+    path.write_text(page)
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--baseurl",default="",help="Empty for domain root or /SpecRelab for project prefix")
@@ -69,9 +127,12 @@ def main():
     if a.baseurl not in ("","/SpecRelab"): raise SystemExit("--baseurl must be empty or /SpecRelab")
     for t in ("git","ruby","doxygen"):
         if not shutil.which(t): raise SystemExit(f"Required tool unavailable: {t}")
-    gpl=checkout("gplspec",a.offline); dspec=checkout("DSpecM1D",a.offline)
+    gpl=checkout("gplspec",a.offline); dspec=checkout("DSpecM1D",a.offline); yspec=checkout("YSpecpp",a.offline)
     destination=a.destination if a.destination.is_absolute() else ROOT/a.destination
-    shutil.rmtree(WORK,ignore_errors=True); WORK.mkdir(parents=True)
+    global WORK
+    BUILD.mkdir(parents=True,exist_ok=True)
+    site_source=tempfile.TemporaryDirectory(prefix="specrelab-site-source-",dir=BUILD)
+    WORK=Path(site_source.name)
     # Allowlisted web material only: no modeldata, builds, numerical sources or test trees.
     for name in ("_config.yml","_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","benchmark.md","api.md","getting-started.md","index.md","LICENSE","work/plots.md"):
         src=gpl/name
@@ -229,7 +290,7 @@ def main():
     # Shared navigation over the source-preserved GPLSpec layout.
     layout=WORK/"_layouts/default.html"
     html=layout.read_text()
-    bar='''<header class="sitebar"><a class="brand" href="{{ site.hub_baseurl }}/">SpecRelab</a><nav aria-label="SpecRelab"><a href="{{ site.hub_baseurl }}/">Home</a><a href="{{ site.hub_baseurl }}/gplspec/">GPLSpec</a><a href="{{ site.hub_baseurl }}/dspecm1d/">DSpecM1D</a></nav></header>\n<link rel="stylesheet" href="{{ site.hub_baseurl }}/assets/css/hub.css">\n<script defer src="{{ site.hub_baseurl }}/assets/js/code-copy.js"></script>\n'''
+    bar='''<header class="sitebar"><a class="brand" href="{{ site.hub_baseurl }}/">SpecRelab</a><nav aria-label="SpecRelab"><a href="{{ site.hub_baseurl }}/">Home</a><a href="{{ site.hub_baseurl }}/gplspec/">GPLSpec</a><a href="{{ site.hub_baseurl }}/dspecm1d/">DSpecM1D</a><a href="{{ site.hub_baseurl }}/yspecpp/">YSpecpp</a><a href="{{ site.hub_baseurl }}/#dspecm3d">DSpecM3D</a></nav></header>\n<link rel="stylesheet" href="{{ site.hub_baseurl }}/assets/css/hub.css">\n<script defer src="{{ site.hub_baseurl }}/assets/js/code-copy.js"></script>\n'''
     html=html.replace("<body>","<body>\n"+bar); layout.write_text(html)
     # DSpecM1D authored pages, example input and published report.
     droot=WORK/"dspecm1d"; shutil.copytree(dspec/"docs/site",droot,dirs_exist_ok=True)
@@ -274,8 +335,7 @@ def main():
         if clone_line not in first_text: raise SystemExit("Could not place pinned checkout command in DSpecM1D first-seismogram block.")
         first_text=first_text.replace(clone_line,clone_line+'\ngit checkout '+dspec_pin,1)
     first.write_text(first_text.replace(first_marker,first_marker+first_notice,1))
-    suite='''<header class="suite-header"><a class="suite-logo" href="__BASE__/"><svg aria-hidden="true" class="brand-mark" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#d5a66c" stroke-width="1.5"/><path d="M4 16h24M16 3c5 6 5 20 0 26M16 3c-5 6-5 20 0 26" fill="none" stroke="#a9d9e4"/><circle cx="16" cy="16" r="3" fill="#d5a66c"/></svg><span>SpecRelab <span class="suite-context">Particle relabelling · radial spectral elements · spherical harmonics</span></span></a><nav aria-label="Project navigation" class="suite-nav"><a href="__BASE__/#software">All software</a><a href="__BASE__/#gplspec">GPLSpec</a><a class="current" aria-current="location" href="__BASE__/dspecm1d/">DSpecM1D</a><a href="__BASE__/#dspecm3d">DSpecM3D</a></nav></header>'''
-    suite=suite.replace("__BASE__",a.baseurl)
+    suite=suite_header(a.baseurl,"dspecm1d")
     nav_group=re.compile(r'<li class="nav-group">(.*?)(</li>)',re.S)
     nav_link=re.compile(r'<a\b[^>]*>.*?</a>',re.S)
     for page in droot.rglob("*.html"):
@@ -299,8 +359,9 @@ def main():
             html=html.replace("<head>","<head>"+script_tag,1)
         page.write_text(html)
     # Regenerate the full API directly from the pinned Doxygen input tree.
-    doxyout=BUILD/"doxygen"; shutil.rmtree(doxyout,ignore_errors=True); doxyout.mkdir(parents=True)
-    doxyfile=BUILD/"Doxyfile"
+    doxy_work=tempfile.TemporaryDirectory(prefix="dspecm1d-doxygen-",dir=BUILD)
+    doxyout=Path(doxy_work.name)/"output"; doxyout.mkdir()
+    doxyfile=Path(doxy_work.name)/"Doxyfile"
     have_dot={"yes":"YES","no":"NO"}.get(a.doxygen_have_dot,"YES" if shutil.which("dot") else "NO")
     if a.doxygen_have_dot=="yes" and not shutil.which("dot"):
         raise SystemExit("--doxygen-have-dot yes requires Graphviz dot on PATH")
@@ -341,6 +402,9 @@ def main():
         if "<head>" in html:
             html=html.replace("<head>","<head><link rel=\"stylesheet\" href=\""+a.baseurl+"/assets/hub.css\">",1)
         page.write_text(html)
+    yroot=build_yspecpp(yspec,PINS["sources"]["YSpecpp"]["commit"])
+    for page in yroot.rglob("*.html"):
+        add_yspecpp_overlay(page,a.baseurl)
     # Legacy GPLSpec API page adapts to the current API overview.
     alias=WORK/"legacy-api-alias.html"
     alias.write_text("---\npermalink: /gplspec/api/api.html\n---\n<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"0; url={{ '/gplspec/api/' | relative_url }}\"><title>GPLSpec API</title><p><a href=\"{{ '/gplspec/api/' | relative_url }}\">Open the GPLSpec API overview</a></p></html>\n")
