@@ -9,7 +9,7 @@
     },
     "DSpecM1D": {
       "repository": "https://github.com/adcm2/DSpecM1D.git",
-      "commit": "42166fb36fbe005cf674a489cdb28ab8273807dd",
+      "commit": "ede16a9bfb0f52e8a3e3c52dde0525a46b3428d2",
       "branch_at_approval": "phase1-maintenance",
       "role": "authored guides, report, parameter example and complete generated Doxygen API"
     }

@@ -6,12 +6,13 @@ from urllib.parse import urlsplit, unquote
 import argparse, hashlib, html, json, re, sys
 ROOT=Path(__file__).resolve().parents[1]
 class Page(HTMLParser):
-    def __init__(self): super().__init__(); self.ids=set(); self.id_tags={}; self.id_counts={}; self.links=[]; self.meta={}; self.text=[]; self.buttons=[]
+    def __init__(self): super().__init__(); self.ids=set(); self.id_tags={}; self.id_counts={}; self.links=[]; self.meta={}; self.text=[]; self.buttons=[]; self.body_classes=[]
     def handle_starttag(self,tag,attrs):
         a=dict(attrs)
         if 'id' in a:self.ids.add(a['id']); self.id_tags.setdefault(a['id'],set()).add(tag); self.id_counts[a['id']]=self.id_counts.get(a['id'],0)+1
         if tag=='a' and 'name' in a:self.ids.add(a['name'])
         if tag=='button':self.buttons.append(a)
+        if tag=='body' and a.get('class'):self.body_classes.extend(a['class'].split())
         for attr in ('href','src','action','poster'):
             if a.get(attr):self.links.append((a[attr],tag,attr))
         if tag=='meta' and a.get('name'):self.meta[a['name'].lower()]=a.get('content','')
@@ -124,6 +125,22 @@ def main():
     api=site/'dspecm1d/api'
     if not (api/'index.html').is_file() or not (api/'search/search.js').is_file():errors.append('Doxygen index/search resources missing')
     if len(list(api.glob('*.html')))<180:errors.append('Doxygen API HTML page count unexpectedly low')
+    # The shared stylesheet has a global box-sizing reset. Doxygen's arrows
+    # encode their indentation through padding, so restore its sizing locally.
+    hub_css=site/'assets/hub.css'
+    if not hub_css.is_file():errors.append('shared hub stylesheet missing')
+    else:
+        css=hub_css.read_text(errors='replace')
+        if '.dspecm1d #nav-tree * { box-sizing: content-box; }' not in css:
+            errors.append('Doxygen navigation tree sizing reset missing from scoped API stylesheet')
+        if '.dspecm1d #nav-tree .arrow' not in css or 'line-height: 22px;' not in css:
+            errors.append('Doxygen navigation tree arrow line-height fix missing from scoped API stylesheet')
+    for api_html in api.rglob('*.html'):
+        page=pages.get(api_html.resolve())
+        if page is None:continue
+        if 'dspecm1d' not in page.body_classes:errors.append(f'{api_html.relative_to(site)}: Doxygen body scope missing')
+        if not any(attr=='href' and urlsplit(raw).path.endswith('/assets/hub.css') for raw,tag,attr in page.links):
+            errors.append(f'{api_html.relative_to(site)}: shared scoped API stylesheet missing')
     # DSpecM1D's upstream script remains responsible for active-page navigation,
     # while the shared script is the only runtime owner of code-copy controls.
     legacy_js=site/'dspecm1d/assets/site.js'
@@ -138,6 +155,45 @@ def main():
         errors.append('shared code-copy script must install exactly one button for each direct pre/code block')
     if 'aria-label", "Copy code"' not in copy_text or 'aria-live' not in copy_text or 'execCommand("copy")' not in copy_text:
         errors.append('shared code-copy script is missing its accessible name, announcement, or selected-text fallback')
+    # The seven paper-case pages link to the unchanged publisher figures and
+    # keep executable shell examples in a single pre/code layer.
+    benchmark_figures={1:1,2:2,7:3,3:4,4:5,5:6,6:7}
+    overview=site/'dspecm1d/paper-reproduction.html'
+    overview_text=overview.read_text(errors='replace') if overview.is_file() else ''
+    overview_page=Page(); overview_page.feed(overview_text)
+    for ex,fig in benchmark_figures.items():
+        rel=f'dspecm1d/benchmark-ex{ex}.html'; page_path=site/rel
+        content=page_path.read_text(errors='replace') if page_path.is_file() else ''
+        if not page_path.is_file():
+            errors.append(f'{rel}: benchmark case page missing')
+            continue
+        page=Page(); page.feed(content)
+        target=f'assets/benchmarks/ggag211fig{fig}.jpeg'
+        if not any(raw==target and tag=='a' and attr=='href' for raw,tag,attr in page.links):
+            errors.append(f'{rel}: linked publisher figure {target} missing')
+        if not any(raw==target and tag=='img' and attr=='src' for raw,tag,attr in page.links):
+            errors.append(f'{rel}: displayed publisher figure {target} missing')
+        if not (page_path.parent/target).is_file():
+            errors.append(f'{rel}: publisher figure asset does not exist: {target}')
+        blocks=re.findall(r'(?is)<pre\b[^>]*>(.*?)</pre>',content)
+        if not blocks:errors.append(f'{rel}: shell command blocks missing')
+        for block in blocks:
+            if len(re.findall(r'(?i)<code\b',block))!=1 or len(re.findall(r'(?i)</code\s*>',block))!=1:
+                errors.append(f'{rel}: shell example has nested or missing code markup')
+                break
+        if f'benchmark-ex{ex}.html' not in {raw for raw,tag,attr in overview_page.links if tag=='a' and attr=='href'}:
+            errors.append(f'paper-reproduction.html: benchmark ex{ex} link missing')
+    install_page=site/'dspecm1d/installation.html'
+    library_page=site/'dspecm1d/library-example.html'
+    install_text=install_page.read_text(errors='replace') if install_page.is_file() else ''
+    library_text=library_page.read_text(errors='replace') if library_page.is_file() else ''
+    stale_package_markers=('Package status:', 'known Linux CI failure', 'CMake install step is under investigation', 'actions/runs/39327159316')
+    for rel,content in (('dspecm1d/installation.html',install_text),('dspecm1d/library-example.html',library_text)):
+        for marker in stale_package_markers:
+            if marker in content:errors.append(f'{rel}: stale installed-package notice remains: {marker}')
+    library_page_parsed=Page(); library_page_parsed.feed(library_text)
+    if library_page_parsed.id_counts.get('source-tree-example')!=1:
+        errors.append('dspecm1d/library-example.html: source-tree-example anchor missing or duplicated')
     for rel in ('dspecm1d/library-example.html','dspecm1d/installation.html','dspecm1d/first-seismogram.html','gplspec/getting-started/index.html'):
         page=site/rel; content=page.read_text(errors='replace') if page.is_file() else ''
         if 'code-copy.js' not in content:errors.append(f'{rel}: shared code-copy script is not included')
