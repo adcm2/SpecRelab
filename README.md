@@ -2,6 +2,10 @@
 
 Non-perturbative planetary modelling with particle relabelling, radial spectral elements and spherical harmonics.
 
+Current documentation: [DSpecM1D guides](https://adcm2.github.io/SpecRelab/dspecm1d/), [generated API](https://adcm2.github.io/SpecRelab/dspecm1d/api/), and [GPLSpec guides](https://adcm2.github.io/SpecRelab/gplspec/).
+
+The frozen `legacy/` snapshot preserves the original static pages. Rebuild compatibility output with `python3 scripts/legacy_compat.py build --scope dspecm1d --output .build/stage4/legacy-dspec`; use `--scope gplspec --gpl-repo /path/to/gplspec` to restore the original modeldata endpoints.
+
 The local standalone website assembles GPLSpec pages and DSpecM1D guides from immutable revisions in `source-revisions.json`; `compatibility-map.json` records preserved legacy routes and compatibility decisions. The build regenerates the complete DSpecM1D Doxygen reference and includes only approved tutorial assets. GitHub Actions validates both URL roots on pull requests and publishes the `/SpecRelab/` site from `main`. To roll back a deployment, revert its commit on `main`; the workflow rebuilds the previous site and source pins.
 
 Requirements: Python 3, Git, Ruby with development headers, Bundler, and Doxygen. Run `scripts/fetch-sources.sh` once to fetch the exact source pins into the ignored sparse cache, then `scripts/bundle install`. Build at the domain root with `python3 scripts/build.py --baseurl ''` or at a `/SpecRelab` path with `python3 scripts/build.py --baseurl /SpecRelab`; add `--offline` after fetching. Run `python3 scripts/check_site.py --site .build/site --baseurl /SpecRelab` (or the selected output directory/base path) to check routes, anchors, assets, and generated API files. `.build/`, source caches, and installed gems are ignored. The build refuses to consume a source cache with tracked or untracked edits; it never resets such a cache. Offline builds require both exact commits and all sparse-checkout blobs to already exist locally and disable Git lazy fetching.

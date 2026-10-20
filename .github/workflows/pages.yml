@@ -50,6 +50,11 @@ jobs:
         run: |
           python3 scripts/build.py --baseurl '' --doxygen-have-dot no --destination .build/site-root-check
           python3 scripts/check_site.py --site .build/site-root-check --baseurl ''
+      - name: Check frozen legacy routes and anchors
+        run: |
+          python3 -m unittest scripts.test_legacy_compat
+          python3 scripts/legacy_compat.py build --scope dspecm1d --output .build/stage4/legacy-ci
+          python3 scripts/legacy_compat.py check --scope dspecm1d --output .build/stage4/legacy-ci --root-site .build/site-root-check --prefix-site .build/site
       - name: Upload the project-prefix site
         if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
         uses: actions/upload-pages-artifact@v4

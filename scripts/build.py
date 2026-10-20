@@ -229,7 +229,7 @@ def main():
     # Shared navigation over the source-preserved GPLSpec layout.
     layout=WORK/"_layouts/default.html"
     html=layout.read_text()
-    bar='''<header class="sitebar"><a class="brand" href="{{ site.hub_baseurl }}/">SpecRelab</a><nav aria-label="SpecRelab"><a href="{{ site.hub_baseurl }}/">Home</a><a href="{{ site.hub_baseurl }}/gplspec/">GPLSpec</a><a href="{{ site.hub_baseurl }}/dspecm1d/">DSpecM1D</a></nav></header>\n<link rel="stylesheet" href="{{ site.hub_baseurl }}/assets/css/hub.css">\n'''
+    bar='''<header class="sitebar"><a class="brand" href="{{ site.hub_baseurl }}/">SpecRelab</a><nav aria-label="SpecRelab"><a href="{{ site.hub_baseurl }}/">Home</a><a href="{{ site.hub_baseurl }}/gplspec/">GPLSpec</a><a href="{{ site.hub_baseurl }}/dspecm1d/">DSpecM1D</a></nav></header>\n<link rel="stylesheet" href="{{ site.hub_baseurl }}/assets/css/hub.css">\n<script defer src="{{ site.hub_baseurl }}/assets/js/code-copy.js"></script>\n'''
     html=html.replace("<body>","<body>\n"+bar); layout.write_text(html)
     # DSpecM1D authored pages, example input and published report.
     droot=WORK/"dspecm1d"; shutil.copytree(dspec/"docs/site",droot,dirs_exist_ok=True)
@@ -237,6 +237,16 @@ def main():
     (droot/"reports").mkdir(parents=True,exist_ok=True)
     shutil.copy2(dspec/"data/params/first_seismogram.txt",droot/"data/params/first_seismogram.txt")
     shutil.copy2(dspec/"love_numbers/report/love_numbers_report.pdf",droot/"reports/love_numbers_report.pdf")
+    # The pinned DSpecM1D script also injects a legacy text copy button. Keep
+    # its active-page navigation behavior while delegating all code copying to
+    # the shared, accessible website control.
+    legacy_js=droot/"assets/site.js"
+    legacy_script=legacy_js.read_text()
+    legacy_copy=re.compile(r'\n  document\.querySelectorAll\("pre"\)\.forEach\(\(pre\) => \{.*?\n  \}\);\n(?=\}\)\(\);)',re.S)
+    legacy_script,legacy_count=legacy_copy.subn("\n",legacy_script)
+    if legacy_count!=1 or 'link.setAttribute("aria-current", "page")' not in legacy_script or 'querySelectorAll("pre")' in legacy_script:
+        raise SystemExit("Could not safely disable only the legacy DSpecM1D code-copy handler")
+    legacy_js.write_text(legacy_script)
     inst=droot/"installation.html"; s=inst.read_text()
     s=s.replace('<section class="page-section"><h2>Requirements</h2>','<section class="page-section" id="quick-start"><h2>Requirements</h2>',1)
     dspec_pin=PINS["sources"]["DSpecM1D"]["commit"]
@@ -275,13 +285,27 @@ def main():
     first.write_text(first_text.replace(first_marker,first_marker+first_notice,1))
     suite='''<header class="suite-header"><a class="suite-logo" href="__BASE__/"><svg aria-hidden="true" class="brand-mark" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="#d5a66c" stroke-width="1.5"/><path d="M4 16h24M16 3c5 6 5 20 0 26M16 3c-5 6-5 20 0 26" fill="none" stroke="#a9d9e4"/><circle cx="16" cy="16" r="3" fill="#d5a66c"/></svg><span>SpecRelab <span class="suite-context">Particle relabelling · radial spectral elements · spherical harmonics</span></span></a><nav aria-label="Project navigation" class="suite-nav"><a href="__BASE__/#software">All software</a><a href="__BASE__/#gplspec">GPLSpec</a><a class="current" aria-current="location" href="__BASE__/dspecm1d/">DSpecM1D</a><a href="__BASE__/#dspecm3d">DSpecM3D</a></nav></header>'''
     suite=suite.replace("__BASE__",a.baseurl)
+    nav_group=re.compile(r'<li class="nav-group">(.*?)(</li>)',re.S)
+    nav_link=re.compile(r'<a\b[^>]*>.*?</a>',re.S)
     for page in droot.rglob("*.html"):
         if "api" in page.relative_to(droot).parts: continue
         html=page.read_text(errors="replace")
+        def format_nav_group(match):
+            content=match.group(1).strip()
+            links=nav_link.findall(content)
+            label_text=nav_link.sub("",content).strip()
+            if not links or not label_text: raise SystemExit(f"Unexpected DSpec navigation group in {page}")
+            items="".join(f"<li>{item}</li>" for item in links)
+            return f'<li class="nav-group"><span class="nav-group-label">{label_text}</span><ul class="nav-group-links">{items}</ul></li>'
+        html,group_count=nav_group.subn(format_nav_group,html)
+        if group_count not in (0,4): raise SystemExit(f"Expected four DSpec navigation groups in {page}, found {group_count}")
         if "<head>" in html:
             html=html.replace("<head>","<head><link rel=\"stylesheet\" href=\""+a.baseurl+"/assets/hub.css\">",1)
         if "<body>" in html:
-            html=html.replace("<body>","<body>"+suite,1)
+            html=html.replace("<body>","<body class=\"dspecm1d\">"+suite,1)
+        script_tag='<script defer src="'+a.baseurl+'/assets/js/code-copy.js"></script>'
+        if "assets/js/code-copy.js" not in html and "<head>" in html:
+            html=html.replace("<head>","<head>"+script_tag,1)
         page.write_text(html)
     # Regenerate the full API directly from the pinned Doxygen input tree.
     doxyout=BUILD/"doxygen"; shutil.rmtree(doxyout,ignore_errors=True); doxyout.mkdir(parents=True)
@@ -316,10 +340,13 @@ def main():
     for page in (droot/"api").rglob("*.html"):
         html=page.read_text(errors="replace")
         html=href_attribute.sub(adapt_manual_href,html)
+        script_tag='<script defer src="'+a.baseurl+'/assets/js/code-copy.js"></script>'
+        if "assets/js/code-copy.js" not in html and "<head>" in html:
+            html=html.replace("<head>","<head>"+script_tag,1)
+        if "<body>" in html:
+            html=html.replace("<body>","<body class=\"dspecm1d\">"+suite,1)
         if "<head>" in html:
             html=html.replace("<head>","<head><link rel=\"stylesheet\" href=\""+a.baseurl+"/assets/hub.css\">",1)
-        if "<body>" in html:
-            html=html.replace("<body>","<body>"+suite,1)
         page.write_text(html)
     # Legacy GPLSpec API page adapts to the current API overview.
     alias=WORK/"legacy-api-alias.html"
@@ -337,6 +364,8 @@ def main():
     shutil.copy2(ROOT/"assets/hub.css",WORK/"assets/hub.css")
     (WORK/"assets/css").mkdir(parents=True,exist_ok=True)
     shutil.copy2(ROOT/"assets/css/hub.css",WORK/"assets/css/hub.css")
+    (WORK/"assets/js").mkdir(parents=True,exist_ok=True)
+    shutil.copy2(ROOT/"assets/js/code-copy.js",WORK/"assets/js/code-copy.js")
     (WORK/"Gemfile").write_text((ROOT/"Gemfile").read_text()); (WORK/"Gemfile.lock").write_text((ROOT/"Gemfile.lock").read_text())
     shutil.rmtree(destination,ignore_errors=True); destination.parent.mkdir(parents=True,exist_ok=True)
     run([ROOT/"scripts/bundle","exec","jekyll","build","--source",WORK,"--destination",destination,"--baseurl",a.baseurl],cwd=ROOT)

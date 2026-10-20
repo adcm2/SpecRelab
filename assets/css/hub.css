@@ -4,3 +4,11 @@
 @media(max-width:600px){.sitebar{align-items:flex-start;flex-direction:column}.sitebar nav{gap:.6rem 1rem}}
 
 .pin-guidance{max-width:72rem;margin:1rem 0;padding:.65rem .9rem;border-left:3px solid #d5a66c;background:rgba(213,166,108,.10);font-size:.92rem;line-height:1.55}.pin-guidance code{overflow-wrap:anywhere}
+
+/* Stage 4 shared code-copy control styling for GPLSpec pages. */
+.has-code-copy pre{position:relative;padding-top:2.8rem!important}
+.code-copy-button{position:absolute;z-index:2;top:.45rem;right:.5rem;display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;padding:.35rem;border:1px solid #9aadb1;border-radius:.3rem;background:#fffefa;color:#17394d;cursor:pointer}
+.code-copy-button:hover{background:#edf3ef;color:#102b3d}
+.code-copy-button[data-state="copied"]{border-color:#477e88;background:#e6f1ec;color:#174a40}
+.code-copy-button svg{display:block;width:1rem;height:1rem;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}
+.copy-status{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}

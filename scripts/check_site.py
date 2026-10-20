@@ -124,6 +124,23 @@ def main():
     api=site/'dspecm1d/api'
     if not (api/'index.html').is_file() or not (api/'search/search.js').is_file():errors.append('Doxygen index/search resources missing')
     if len(list(api.glob('*.html')))<180:errors.append('Doxygen API HTML page count unexpectedly low')
+    # DSpecM1D's upstream script remains responsible for active-page navigation,
+    # while the shared script is the only runtime owner of code-copy controls.
+    legacy_js=site/'dspecm1d/assets/site.js'
+    legacy_text=legacy_js.read_text(errors='replace') if legacy_js.is_file() else ''
+    if 'link.setAttribute("aria-current", "page")' not in legacy_text:
+        errors.append('served DSpecM1D legacy script lost active-page navigation behavior')
+    if 'querySelectorAll("pre")' in legacy_text or 'copy-code' in legacy_text:
+        errors.append('served DSpecM1D legacy script still injects duplicate code-copy controls')
+    copy_js=site/'assets/js/code-copy.js'
+    copy_text=copy_js.read_text(errors='replace') if copy_js.is_file() else ''
+    if copy_text.count('document.querySelectorAll("pre > code")')!=1 or 'code.parentElement.append(button)' not in copy_text:
+        errors.append('shared code-copy script must install exactly one button for each direct pre/code block')
+    if 'aria-label", "Copy code"' not in copy_text or 'aria-live' not in copy_text or 'execCommand("copy")' not in copy_text:
+        errors.append('shared code-copy script is missing its accessible name, announcement, or selected-text fallback')
+    for rel in ('dspecm1d/library-example.html','dspecm1d/installation.html','dspecm1d/first-seismogram.html','gplspec/getting-started/index.html'):
+        page=site/rel; content=page.read_text(errors='replace') if page.is_file() else ''
+        if 'code-copy.js' not in content:errors.append(f'{rel}: shared code-copy script is not included')
     manual_pages=('first-seismogram.html','installation.html','library-example.html','parameter-files.html','library-testing.html')
     api_index=api/'index.html'
     api_page=pages.get(api_index.resolve())
