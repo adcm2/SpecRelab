@@ -15,7 +15,7 @@
     },
     "YSpecpp": {
       "repository": "https://github.com/da380/YSpecpp.git",
-      "commit": "20c90245541f8a911a7e2ddb7418e15f9e2d6f7e",
+      "commit": "f96a43c358f7c1065eff361800f141adbc547967",
       "branch_at_approval": "docs/phase1-user-guide",
       "role": "checked user manual, focused examples, fixtures and generated Doxygen API"
     }
