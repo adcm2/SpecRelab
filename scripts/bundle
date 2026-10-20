@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-bundle_cli="$(ruby -e 'print File.join(Gem::Specification.find_by_name("bundler").full_gem_path, "libexec/bundle")')"
+bundle_cli="$(ruby -e 'spec = Gem::Specification.find_by_name("bundler"); print Gem.bin_path("bundler", "bundle", "= #{spec.version}")')"
 export BUNDLE_PATH="$repo_root/vendor/bundle"
 exec ruby "$bundle_cli" "$@"
