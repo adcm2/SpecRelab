@@ -124,6 +124,25 @@ def main():
     api=site/'dspecm1d/api'
     if not (api/'index.html').is_file() or not (api/'search/search.js').is_file():errors.append('Doxygen index/search resources missing')
     if len(list(api.glob('*.html')))<180:errors.append('Doxygen API HTML page count unexpectedly low')
+    manual_pages=('first-seismogram.html','installation.html','library-example.html','parameter-files.html','library-testing.html')
+    api_index=api/'index.html'
+    api_page=pages.get(api_index.resolve())
+    api_hrefs={raw for raw,tag,attr in (api_page.links if api_page else []) if tag=='a' and attr=='href'}
+    for manual in ('',)+manual_pages:
+        expected=f'{a.baseurl}/dspecm1d/{manual}' if a.baseurl else f'/dspecm1d/{manual}'
+        if expected not in api_hrefs:errors.append(f'Doxygen README manual guide must link to the local page {expected}')
+        local_path=urlsplit(expected).path
+        if a.baseurl and (local_path==a.baseurl or local_path.startswith(a.baseurl+'/')):local_path=local_path[len(a.baseurl):] or '/'
+        target=candidate_for(site,api_index,local_path)
+        if target is None or not target.is_file():errors.append(f'Doxygen README manual guide target does not resolve within this site: {expected}')
+    for api_html in api.rglob('*.html'):
+        page=pages.get(api_html.resolve())
+        if not page:continue
+        for raw,tag,attr in page.links:
+            if attr!='href':continue
+            u=urlsplit(raw)
+            if u.scheme=='https' and u.netloc=='adcm2.github.io' and u.path.startswith('/DSpecM1D/') and (not u.path.removeprefix('/DSpecM1D/') or u.path.removeprefix('/DSpecM1D/') in manual_pages):
+                errors.append(f'{api_html.relative_to(site)}: obsolete DSpecM1D manual URL remains in href attribute: {raw}')
     # Approved asset hashes and counts are checked from the tracked bundle.
     manifest=json.loads((ROOT/'source-revisions.json').read_text())
     for name,spec in manifest['artwork'].items():

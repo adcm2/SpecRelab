@@ -3,6 +3,7 @@
 from pathlib import Path
 import argparse, json, re, shutil, subprocess, sys
 import os
+from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 PINS = json.loads((ROOT / "source-revisions.json").read_text())
 CACHE, WORK = ROOT / ".cache", ROOT / ".build-src"
@@ -293,8 +294,28 @@ def main():
     api=doxyout/"html"
     if not (api/"index.html").is_file() or not (api/"search/search.js").is_file(): raise SystemExit("Doxygen output incomplete: missing index/search")
     shutil.copytree(api,droot/"api",dirs_exist_ok=True)
+    # Doxygen's README guide links still target the old standalone publisher.
+    # Adapt only href attributes for manual pages that are copied into this
+    # site; leave generated API URLs, source links, and body/code text intact.
+    manual_pages={"first-seismogram.html","installation.html","library-example.html","parameter-files.html","library-testing.html"}
+    href_attribute=re.compile(r'''(?<![\w:-])(\bhref\s*=\s*)(["'])(.*?)\2''',re.I|re.S)
+    def adapt_manual_href(match):
+        value=match.group(3)
+        parsed=urlsplit(value)
+        if parsed.scheme=="https" and parsed.netloc=="adcm2.github.io" and (parsed.path=="/DSpecM1D/" or parsed.path.startswith("/DSpecM1D/")):
+            relative=parsed.path.removeprefix("/DSpecM1D/")
+            if not relative or relative in manual_pages:
+                value=f"{a.baseurl}/dspecm1d/"+relative
+                if parsed.query:value+="?"+parsed.query
+                if parsed.fragment:value+="#"+parsed.fragment
+        return match.group(1)+match.group(2)+value+match.group(2)
+    probe='<a href="https://adcm2.github.io/DSpecM1D/library-testing.html?view=full#tests">guide</a><a href="https://adcm2.github.io/DSpecM1D/api/classFoo.html">API</a><a href="https://other.example/DSpecM1D/installation.html">other</a><a data-href="https://adcm2.github.io/DSpecM1D/installation.html">data</a><svg xlink:href="https://adcm2.github.io/DSpecM1D/installation.html"></svg><p>https://adcm2.github.io/DSpecM1D/installation.html</p>'
+    checked=href_attribute.sub(adapt_manual_href,probe)
+    expected=f'<a href="{a.baseurl}/dspecm1d/library-testing.html?view=full#tests">guide</a><a href="https://adcm2.github.io/DSpecM1D/api/classFoo.html">API</a><a href="https://other.example/DSpecM1D/installation.html">other</a><a data-href="https://adcm2.github.io/DSpecM1D/installation.html">data</a><svg xlink:href="https://adcm2.github.io/DSpecM1D/installation.html"></svg><p>https://adcm2.github.io/DSpecM1D/installation.html</p>'
+    if checked!=expected:raise SystemExit("Doxygen manual-link adapter regression: rewrote an unrelated URL or changed a non-href attribute")
     for page in (droot/"api").rglob("*.html"):
         html=page.read_text(errors="replace")
+        html=href_attribute.sub(adapt_manual_href,html)
         if "<head>" in html:
             html=html.replace("<head>","<head><link rel=\"stylesheet\" href=\""+a.baseurl+"/assets/hub.css\">",1)
         if "<body>" in html:
