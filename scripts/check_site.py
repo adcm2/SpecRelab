@@ -89,8 +89,19 @@ def main():
         errors.append('GPLSpec page is missing the shared suite header')
     else:
         suite_links=dict((label.strip(),href) for href,label in re.findall(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>',suite.group(1),re.S))
+        expected_yspec_home=f'{base}/yspecpp/' if base else '/yspecpp/'
         if suite_links.get('Home')!=expected_suite_home or suite_links.get('GPLSpec')!=expected_gpl_home:
-            errors.append('Shared suite header home links changed or point to the wrong site root')
+            errors.append('Shared suite header links changed or point to the wrong site routes')
+    dspec_suite_page=site/'dspecm1d/installation.html'
+    dspec_suite_html=dspec_suite_page.read_text(errors='replace') if dspec_suite_page.is_file() else ''
+    dspec_suite=re.search(r'<header class="suite-header">(.*?)</header>',dspec_suite_html,re.S)
+    if not dspec_suite:
+        errors.append('DSpecM1D page is missing the shared suite header')
+    else:
+        dspec_links=dict((label.strip(),href) for href,label in re.findall(r'<a\b[^>]*href="([^"]*)"[^>]*>(.*?)</a>',dspec_suite.group(1),re.S))
+        expected_yspec_home=f'{base}/yspecpp/' if base else '/yspecpp/'
+        if dspec_links.get('GPLSpec')!=f'{base}/#gplspec' or dspec_links.get('YSpecpp')!=expected_yspec_home or dspec_links.get('DSpecM3D')!=f'{base}/#dspecm3d':
+            errors.append('DSpecM1D shared suite header changed existing project anchor semantics or omits YSpecpp')
     for f in files:
         if 'polyfill.io' in f.read_text(errors='replace'):
             errors.append(f'{f.relative_to(site)}: obsolete polyfill.io script remains')
@@ -141,6 +152,44 @@ def main():
         if 'dspecm1d' not in page.body_classes:errors.append(f'{api_html.relative_to(site)}: Doxygen body scope missing')
         if not any(attr=='href' and urlsplit(raw).path.endswith('/assets/hub.css') for raw,tag,attr in page.links):
             errors.append(f'{api_html.relative_to(site)}: shared scoped API stylesheet missing')
+    # YSpecpp output comes from the pinned source-owned manual/API builder.
+    yroot=site/'yspecpp'; yapi=yroot/'api'; ypin=json.loads((ROOT/'source-revisions.json').read_text())['sources']['YSpecpp']['commit']
+    yindex=yroot/'index.html'; yfirst=yroot/'first-seismogram.html'; yapi_index=yapi/'index.html'
+    if not yindex.is_file() or not yfirst.is_file() or not yapi_index.is_file() or not (yapi/'search/search.js').is_file():
+        errors.append('YSpecpp manual, first-seismogram guide, API index or Doxygen search assets are missing')
+    yapis=list(yapi.rglob('*.html'))
+    if len(yapis)<100:errors.append(f'YSpecpp Doxygen API HTML page count unexpectedly low: {len(yapis)}')
+    ycss=hub_css.read_text(errors='replace') if hub_css.is_file() else ''
+    for marker in ('.yspecpp #nav-tree * { box-sizing: content-box; }','.yspecpp #nav-tree .arrow','line-height:22px;'):
+        if marker not in ycss:errors.append(f'YSpecpp Doxygen navigation scope/style missing: {marker}')
+    if '@media(max-width:760px)' not in ycss or '.yspecpp #side-nav,.yspecpp #splitbar' not in ycss or '.yspecpp #doc-content{display:block!important;margin-left:0!important;width:auto!important' not in ycss:
+        errors.append('YSpecpp mobile API layout must hide its fixed tree and restore full-width document content')
+    for api_html in yapis:
+        page=pages.get(api_html.resolve())
+        if not page:continue
+        if 'yspecpp' not in page.body_classes:errors.append(f'{api_html.relative_to(site)}: YSpecpp body scope missing')
+        if not any(attr=='href' and urlsplit(raw).path.endswith('/assets/hub.css') for raw,tag,attr in page.links):
+            errors.append(f'{api_html.relative_to(site)}: shared scoped YSpecpp API stylesheet missing')
+    for rel in ('index.html','first-seismogram.html','installation.html','examples.html','input-files.html','model-and-output-formats.html','methods-and-validation.html','release-notes.html','library-example.html','maintainers.html'):
+        page=yroot/rel; content=page.read_text(errors='replace') if page.is_file() else ''
+        if not content:errors.append(f'YSpecpp required guide missing: {rel}');continue
+        if ypin not in content:errors.append(f'yspecpp/{rel}: immutable documentation revision notice missing')
+        if 'class="yspecpp"' not in content:errors.append(f'yspecpp/{rel}: scoped body class missing')
+        if 'class="suite-header"' not in content or 'YSpecpp' not in content:errors.append(f'yspecpp/{rel}: shared suite header missing')
+        if 'assets/hub.css' not in content:errors.append(f'yspecpp/{rel}: shared site stylesheet missing')
+    if yapi_index.is_file() and 'YSpecpp' not in yapi_index.read_text(errors='replace'):
+        errors.append('YSpecpp API index lacks project identity')
+    if yindex.is_file():
+        yhtml=yindex.read_text(errors='replace')
+        for required in ('first-seismogram.html','input-files.html','model-and-output-formats.html','methods-and-validation.html','examples.html','release-notes.html','LICENSE'):
+            if required not in yhtml:errors.append(f'YSpecpp landing page omits local guide/download link {required}')
+    cache=ROOT/'.cache/YSpecpp'
+    if cache.is_dir():
+        for rel,dest_rel in (('examples/prem.200','examples/prem.200'),('docs/theory/adjoint-kernels.pdf','assets/adjoint-kernels.pdf'),('LICENSE','LICENSE')):
+            copied=yroot/dest_rel
+            source=cache/rel
+            if source.is_file() and (not copied.is_file() or hashlib.sha256(source.read_bytes()).digest()!=hashlib.sha256(copied.read_bytes()).digest()):
+                errors.append(f'YSpecpp published asset differs from pinned source: {rel}')
     # DSpecM1D's upstream script remains responsible for active-page navigation,
     # while the shared script is the only runtime owner of code-copy controls.
     legacy_js=site/'dspecm1d/assets/site.js'
@@ -244,7 +293,7 @@ def main():
         else:
             setup_pattern=r'cd DSpecM1D\s+git checkout '+re.escape(pin)
         if not re.search(setup_pattern,plain):errors.append(f'{rel}: setup code block does not clone/checkout the documented immutable pin')
-    if 'This shared site brings three related but distinct projects into one place' not in home:errors.append('homepage shared-site wording changed or missing')
+    if 'This shared site brings four related but distinct projects into one place' not in home:errors.append('homepage shared-site wording changed or missing')
     print(f'HTML pages: {len(files)}; local links checked: {checked}; generated API HTML pages: {len(list(api.glob("*.html")))}')
     if errors:
         print(f'FAIL: {len(errors)} issue(s)'); print('\n'.join(errors[:80])); return 1

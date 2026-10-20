@@ -12,8 +12,8 @@ for name,item in pins['sources'].items():
     else:
         subprocess.run(['python3',str(root/'scripts/cache_integrity.py'),name,str(dest)],check=True)
     subprocess.run(['git','-C',str(dest),'fetch','--filter=blob:none','--no-tags','origin',item['commit']],check=True)
-    paths={'gplspec':['_config.yml','_layouts','_includes','_tutorials','_benchmarks','assets','benchfigures','benchmark.md','api.md','getting-started.md','index.md','LICENSE','work/plots.md'],'DSpecM1D':['docs','DSpecM1D','tutorials/t1.cpp','README.md','data/params/first_seismogram.txt','love_numbers/report/love_numbers_report.pdf']}[name]
-    directories={'_layouts','_includes','_tutorials','_benchmarks','assets','benchfigures','docs','DSpecM1D'}
+    paths={'gplspec':['_config.yml','_layouts','_includes','_tutorials','_benchmarks','assets','benchfigures','benchmark.md','api.md','getting-started.md','index.md','LICENSE','work/plots.md'],'DSpecM1D':['docs','DSpecM1D','tutorials/t1.cpp','README.md','data/params/first_seismogram.txt','love_numbers/report/love_numbers_report.pdf'],'YSpecpp':['.gitignore','CMakeLists.txt','README.md','LICENSE','YSpec','docs/site','docs/tools','docs/Doxyfile.in','docs/theory/adjoint-kernels.pdf','examples/prem.200'] }[name]
+    directories={'_layouts','_includes','_tutorials','_benchmarks','assets','benchfigures','docs','docs/site','docs/tools','DSpecM1D','YSpec'}
     patterns=['/'+path+('/' if path in directories else '') for path in paths]
     subprocess.run(['git','-C',str(dest),'sparse-checkout','set','--no-cone','--',*patterns],check=True)
     subprocess.run(['git','-C',str(dest),'checkout','--detach',item['commit']],check=True)
