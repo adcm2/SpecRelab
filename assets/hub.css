@@ -16,8 +16,9 @@ html,body{overflow-x:clip}
 .dspecm1d .nav-group-links{display:flex;flex-wrap:wrap;gap:.25rem .9rem;margin:0;padding:0;list-style:none}
 .dspecm1d .nav-group-links li{margin:0}
 .dspecm1d .nav-group-links a{display:inline-block;padding:.12rem 0;text-decoration:underline;text-underline-offset:.18em}
-.has-code-copy pre{position:relative;padding-top:2.8rem!important}
-.code-copy-button{position:absolute;z-index:2;top:.45rem;right:.5rem;display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;padding:.35rem;border:1px solid #9aadb1;border-radius:.3rem;background:#fffefa;color:#17394d;cursor:pointer}
+.has-code-copy pre:has(>code){position:relative;padding:1rem 3rem 1rem 1rem!important;overflow:visible!important}
+.has-code-copy pre>code{display:block;max-width:100%;overflow-x:auto}
+.code-copy-button{box-sizing:border-box;position:absolute;z-index:2;top:.45rem;right:.5rem;display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;padding:.35rem;border:1px solid #9aadb1;border-radius:.3rem;background:#fffefa;color:#17394d;cursor:pointer}
 .code-copy-button:hover{background:#edf3ef;color:#102b3d}
 .code-copy-button[data-state="copied"]{border-color:#477e88;background:#e6f1ec;color:#174a40}
 .code-copy-button svg{display:block;width:1rem;height:1rem;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7}
