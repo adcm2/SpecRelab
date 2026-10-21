@@ -170,7 +170,7 @@ def main():
         if 'yspecpp' not in page.body_classes:errors.append(f'{api_html.relative_to(site)}: YSpecpp body scope missing')
         if not any(attr=='href' and urlsplit(raw).path.endswith('/assets/hub.css') for raw,tag,attr in page.links):
             errors.append(f'{api_html.relative_to(site)}: shared scoped YSpecpp API stylesheet missing')
-    for rel in ('index.html','first-seismogram.html','installation.html','examples.html','input-files.html','model-and-output-formats.html','methods-and-validation.html','release-notes.html','library-example.html','maintainers.html'):
+    for rel in ('index.html','first-seismogram.html','installation.html','examples.html','input-files.html','model-and-output-formats.html','methods-and-validation.html','release-notes.html','library-example.html','maintainers.html','python.html','plotting.html','kernels.html'):
         page=yroot/rel; content=page.read_text(errors='replace') if page.is_file() else ''
         if not content:errors.append(f'YSpecpp required guide missing: {rel}');continue
         if ypin not in content:errors.append(f'yspecpp/{rel}: immutable documentation revision notice missing')
@@ -181,7 +181,7 @@ def main():
         errors.append('YSpecpp API index lacks project identity')
     if yindex.is_file():
         yhtml=yindex.read_text(errors='replace')
-        for required in ('first-seismogram.html','input-files.html','model-and-output-formats.html','methods-and-validation.html','examples.html','release-notes.html','LICENSE'):
+        for required in ('first-seismogram.html','input-files.html','model-and-output-formats.html','methods-and-validation.html','examples.html','release-notes.html','python.html','plotting.html','kernels.html','LICENSE'):
             if required not in yhtml:errors.append(f'YSpecpp landing page omits local guide/download link {required}')
     cache=ROOT/'.cache/YSpecpp'
     if cache.is_dir():
