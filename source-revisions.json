@@ -9,8 +9,8 @@
     },
     "DSpecM1D": {
       "repository": "https://github.com/adcm2/DSpecM1D.git",
-      "commit": "ede16a9bfb0f52e8a3e3c52dde0525a46b3428d2",
-      "branch_at_approval": "phase1-maintenance",
+      "commit": "b7d87b8dba1817aaa82cf30fac6c5980d228a7ba",
+      "branch_at_approval": "master",
       "role": "authored guides, report, parameter example and complete generated Doxygen API"
     },
     "YSpecpp": {
