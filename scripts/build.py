@@ -42,8 +42,8 @@ def checkout(name, offline):
             raise SystemExit(f"Offline {name} cache lacks pinned commit {spec['commit']}; fetch it with scripts/fetch-sources.sh while online.") from exc
     else:
         run(["git","-C",dest,"fetch","--filter=blob:none","--no-tags","origin",spec["commit"]])
-    paths={"gplspec":["_config.yml","_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","benchmark.md","api.md","getting-started.md","index.md","LICENSE","work/plots.md"],"DSpecM1D":["docs","DSpecM1D","tutorials/t1.cpp","README.md","data/params/first_seismogram.txt","love_numbers/report/love_numbers_report.pdf"],"YSpecpp":[".gitignore","CMakeLists.txt","README.md","LICENSE","YSpec","docs/site","docs/tools","docs/Doxyfile.in","docs/theory/adjoint-kernels.pdf","examples/prem.200"]}[name]
-    directories={"_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","docs","docs/site","docs/tools","DSpecM1D","YSpec"}
+    paths={"gplspec":["_config.yml","_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","benchmark.md","api.md","getting-started.md","index.md","LICENSE","work/plots.md"],"DSpecM1D":["docs","DSpecM1D","tutorials/t1.cpp","README.md","data/params/first_seismogram.txt","love_numbers/report/love_numbers_report.pdf"],"YSpecpp":[".gitignore","CMakeLists.txt","README.md","LICENSE","YSpec","docs/site","docs/tools","docs/Doxyfile.in","docs/theory/adjoint-kernels.pdf","examples/prem.200","examples/cross-section/snapshot.json","examples/depths/input.json","examples/force/input.json","examples/gravity/cowling.json","examples/gravity/full.json","examples/gravity/none.json","examples/instrument/input.json","examples/kernels-3d/s-wave.json","examples/kernels-gallery/diffracted.json","examples/kernels-gallery/gallery.json","examples/kernels-gallery/make_input.py","examples/kernels/traveltimes.json","examples/map/snapshot.json","examples/record-section/input.json","python/yspec/plot"]}[name]
+    directories={"_layouts","_includes","_tutorials","_benchmarks","assets","benchfigures","docs","docs/site","docs/tools","DSpecM1D","YSpec","python/yspec/plot"}
     patterns=["/"+path+("/" if path in directories else "") for path in paths]
     run(["git","-C",dest,"sparse-checkout","set","--no-cone","--",*patterns],env=git_environment(offline))
     run(["git","-C",dest,"checkout","--detach",spec["commit"]],env=git_environment(offline))
@@ -68,7 +68,22 @@ def build_yspecpp(source_cache, commit):
         run(["git","clone","--shared","--no-checkout",source_cache,source])
         sparse=["/.gitignore","/CMakeLists.txt","/README.md","/LICENSE","/YSpec/",
                 "/docs/site/","/docs/tools/","/docs/Doxyfile.in",
-                "/docs/theory/adjoint-kernels.pdf","/examples/prem.200"]
+                "/docs/theory/adjoint-kernels.pdf","/examples/prem.200",
+                "/examples/cross-section/snapshot.json",
+                "/examples/depths/input.json",
+                "/examples/force/input.json",
+                "/examples/gravity/cowling.json",
+                "/examples/gravity/full.json",
+                "/examples/gravity/none.json",
+                "/examples/instrument/input.json",
+                "/examples/kernels-3d/s-wave.json",
+                "/examples/kernels-gallery/diffracted.json",
+                "/examples/kernels-gallery/gallery.json",
+                "/examples/kernels-gallery/make_input.py",
+                "/examples/kernels/traveltimes.json",
+                "/examples/map/snapshot.json",
+                "/examples/record-section/input.json",
+                "/python/yspec/plot/"]
         run(["git","-C",source,"sparse-checkout","set","--no-cone","--",*sparse])
         actual=subprocess.check_output(["git","-C",source,"rev-parse","HEAD"],text=True).strip()
         if actual!=commit: raise SystemExit(f"YSpecpp build checkout mismatch: {actual}")
