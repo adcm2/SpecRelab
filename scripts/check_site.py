@@ -185,7 +185,15 @@ def main():
             if required not in yhtml:errors.append(f'YSpecpp landing page omits local guide/download link {required}')
     cache=ROOT/'.cache/YSpecpp'
     if cache.is_dir():
-        for rel,dest_rel in (('examples/prem.200','examples/prem.200'),('docs/theory/adjoint-kernels.pdf','assets/adjoint-kernels.pdf'),('LICENSE','LICENSE')):
+        for rel,dest_rel in (
+            ('examples/prem.200','examples/prem.200'),
+            ('docs/theory/adjoint-kernels.pdf','assets/adjoint-kernels.pdf'),
+            ('LICENSE','LICENSE'),
+            ('docs/site/assets/first-seismogram.svg','assets/first-seismogram.svg'),
+            ('docs/site/assets/traces-small.png','assets/traces-small.png'),
+            ('docs/site/assets/kernels-radial-small.png','assets/kernels-radial-small.png'),
+            ('docs/site/assets/kernels-section-small.png','assets/kernels-section-small.png'),
+        ):
             copied=yroot/dest_rel
             source=cache/rel
             if source.is_file() and (not copied.is_file() or hashlib.sha256(source.read_bytes()).digest()!=hashlib.sha256(copied.read_bytes()).digest()):
